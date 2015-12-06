@@ -15,7 +15,7 @@ class Command(BaseCommand):
         Import BNF numbered chapters, sections and paragraphs.
         '''
         if 'filename' not in options:
-            print 'Please supply a filename'
+            print('Please supply a filename')
             sys.exit
 
         reader = csv.DictReader(open(options['filename'], 'rU'))

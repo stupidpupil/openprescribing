@@ -62,7 +62,7 @@ class Command(BaseCommand):
 
     def import_shas_and_pcts(self, filename):
         if self.IS_VERBOSE:
-            print 'Importing SHAs and PCTs from %s' % filename
+            print('Importing SHAs and PCTs from %s' % filename)
         rows = csv.reader(open(filename, 'rU'))
         sha_codes = set()
         pct_codes = set()
@@ -77,12 +77,12 @@ class Command(BaseCommand):
             p, created = PCT.objects.get_or_create(code=pct_code)
             pcts_created += created
         if self.IS_VERBOSE:
-            print shas_created, 'SHAs created'
-            print pcts_created, 'PCTs created'
+            print(shas_created, 'SHAs created')
+            print(pcts_created, 'PCTs created')
 
     def import_prescriptions(self, filename, cursor):
         if self.IS_VERBOSE:
-            print 'Importing Prescriptions from %s' % filename
+            print('Importing Prescriptions from %s' % filename)
         # start = time.clock()
         copy_str = "COPY frontend_prescription(sha_id,pct_id,"
         copy_str += "practice_id,chemical_id,presentation_code,"
@@ -94,14 +94,14 @@ class Command(BaseCommand):
         try:
             self.conn.commit()
         except Exception as err:
-            print 'EXCEPTION:', err
+            print('EXCEPTION:', err)
         # end = time.clock()
         # time_taken = (end-start)
         # print 'time_taken', time_taken
 
     def delete_existing_prescriptions(self, filename):
         if self.IS_VERBOSE:
-            print 'Deleting existing Prescriptions for month'
+            print('Deleting existing Prescriptions for month')
         file_str = filename.split('/')[-1].split('.')[0]
         file_str = file_str.replace('PDPI+BNFT_formatted', '')
         date_from_filename = file_str[1:5] + '-' + file_str[5:] + '-01'
@@ -110,7 +110,7 @@ class Command(BaseCommand):
 
     def vacuum_db(self, cursor):
         if self.IS_VERBOSE:
-            print 'Vacuuming database...'
+            print('Vacuuming database...')
         old_isolation_level = self.conn.isolation_level
         self.conn.set_isolation_level(0)
         cursor.execute("VACUUM frontend_prescription")
@@ -118,5 +118,5 @@ class Command(BaseCommand):
 
     def analyze_db(self, cursor):
         if self.IS_VERBOSE:
-            print 'Analyzing database...'
+            print('Analyzing database...')
         cursor.execute('ANALYZE VERBOSE frontend_prescription')

@@ -1,5 +1,5 @@
 from django.contrib.gis.db import models
-from validators import isAlphaNumeric
+from frontend.validators import isAlphaNumeric
 
 
 class Section(models.Model):

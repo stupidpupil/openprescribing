@@ -36,7 +36,7 @@ class Command(BaseCommand):
 
     def import_practices(self, filename):
         if self.IS_VERBOSE:
-            print 'Importing practices from %s' % filename
+            print('Importing practices from %s' % filename)
         lines = count = 0
         practices = csv.reader(open(filename, 'rU'))
         for row in practices:
@@ -55,4 +55,4 @@ class Command(BaseCommand):
             if created:
                 count += 1
         if self.IS_VERBOSE:
-            print '%s lines read, %s Practice objects created' % (lines, count)
+            print('%s lines read, %s Practice objects created' % (lines, count))

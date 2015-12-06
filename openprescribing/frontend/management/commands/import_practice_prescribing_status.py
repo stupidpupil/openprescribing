@@ -17,7 +17,7 @@ class Command(BaseCommand):
             self.IS_VERBOSE = True
 
         if not options['filename']:
-            print 'Please supply a filename'
+            print('Please supply a filename')
             sys.exit()
 
         reader = csv.reader(open(options['filename'], 'rU'))

@@ -61,7 +61,7 @@ class Command(BaseCommand):
 
     def create_matviews(self, cursor):
         if self.IS_VERBOSE:
-            print 'Adding materialized views...'
+            print('Adding materialized views...')
 
         # Spending by practice by month.
         cmd = 'CREATE MATERIALIZED VIEW vw_practice_summary AS '
@@ -160,7 +160,7 @@ class Command(BaseCommand):
 
     def vacuum_db(self, cursor):
         if self.IS_VERBOSE:
-            print 'Vacuuming database...'
+            print('Vacuuming database...')
         old_isolation_level = self.conn.isolation_level
         self.conn.set_isolation_level(0)
         query = "VACUUM"
@@ -169,11 +169,11 @@ class Command(BaseCommand):
 
     def analyze_db(self, cursor):
         if self.IS_VERBOSE:
-            print 'Analyzing database...'
+            print('Analyzing database...')
         self._print_and_execute(cursor, 'ANALYZE VERBOSE')
 
     def _print_and_execute(self, cursor, cmd):
         if self.IS_VERBOSE:
-            print cmd
+            print(cmd)
         cursor.execute(cmd)
         self.conn.commit()

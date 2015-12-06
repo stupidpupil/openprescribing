@@ -28,11 +28,11 @@ class Command(BaseCommand):
 
         for f in filenames:
             if self.IS_VERBOSE:
-                print "--------- Converting %s -----------" % f
+                print("--------- Converting %s -----------" % f)
             reader = csv.reader(open(f, 'rU'))
             next(reader)
             filename_for_output = self.create_filename_for_output_file(f)
-            writer = csv.writer(open(filename_for_output, 'wb'))
+            writer = csv.writer(open(filename_for_output, 'w'))
             for row in reader:
                 data = self.format_row_for_sql_copy(row)
                 writer.writerow(data)

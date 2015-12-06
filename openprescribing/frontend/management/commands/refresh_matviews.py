@@ -42,7 +42,7 @@ class Command(BaseCommand):
 
     def refresh_matviews(self, cursor):
         if self.IS_VERBOSE:
-            print 'Refreshing materialized views...'
+            print('Refreshing materialized views...')
         refresh = 'REFRESH MATERIALIZED VIEW'
         cmd = '%s vw_presentation_summary_by_ccg' % refresh
         self._print_and_execute(cursor, cmd)
@@ -57,7 +57,7 @@ class Command(BaseCommand):
 
     def vacuum_db(self, cursor):
         if self.IS_VERBOSE:
-            print 'Vacuuming database...'
+            print('Vacuuming database...')
         old_isolation_level = self.conn.isolation_level
         self.conn.set_isolation_level(0)
         query = "VACUUM"
@@ -66,11 +66,11 @@ class Command(BaseCommand):
 
     def analyze_db(self, cursor):
         if self.IS_VERBOSE:
-            print 'Analyzing database...'
+            print('Analyzing database...')
         cursor.execute('ANALYZE VERBOSE')
 
     def _print_and_execute(self, cursor, cmd):
         if self.IS_VERBOSE:
-            print cmd
+            print(cmd)
         cursor.execute(cmd)
         self.conn.commit()
