@@ -18,7 +18,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         if 'filename' not in options:
-            print 'Please supply a KML filename'
+            print('Please supply a KML filename')
             sys.exit
 
         ds = DataSource(options['filename'])
