@@ -2,7 +2,7 @@ import csv
 import glob
 import sys
 from django.core.management.base import BaseCommand, CommandError
-from frontend.models import Practice
+from frontend.models import Practice, Chemical
 
 from frontend.management.commands.import_hscic_chemicals import Command as ImportHSCICChemicals
 
