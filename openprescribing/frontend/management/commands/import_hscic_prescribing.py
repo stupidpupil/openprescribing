@@ -105,7 +105,7 @@ class Command(BaseCommand):
         file_str = filename.split('/')[-1].split('.')[0]
         file_str = file_str.replace('PDPI+BNFT_formatted', '')
         date_from_filename = file_str[1:5] + '-' + file_str[5:] + '-01'
-        p = Prescription.objects.filter(processing_date=date_from_filename)
+        p = Prescription.objects.filter(processing_date=date_from_filename).exclude(practice__code__startswith='W')
         p.delete()
 
     def vacuum_db(self, cursor):
