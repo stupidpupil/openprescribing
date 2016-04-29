@@ -120,12 +120,17 @@ var utils = {
                 y_actual_cost: 0,
                 y_items: 0
             };
-            p[key][x_val_key] = +c[x_val];
+            if (x_val.slice(0, 8) == 'star_pu.') {
+                p[key][x_val_key] = +c['star_pu'][x_val.slice(8, x_val.length)];
+            } else {
+                p[key][x_val_key] = +c[x_val];
+            }
             return p;
         },{});
         xAndYDataDict = _.reduce(yData, function(p, c) {
             var key = c.row_id + "-" + c.date;
             if (p[key]) {
+                p[key].setting = c.setting;
                 p[key].y_actual_cost = +c.actual_cost || 0;
                 p[key].y_items = +c.items || 0;
             } else {
@@ -143,8 +148,9 @@ var utils = {
             }
             return p;
         }, xDataDict);
-        var keys = [];
+
         // Polyfill for IE8 etc.
+        var keys = [];
         if (!Object.keys) {
             for (var i in xAndYDataDict) {
               if (xAndYDataDict.hasOwnProperty(i)) {
@@ -154,6 +160,7 @@ var utils = {
         } else {
             keys = Object.keys(xAndYDataDict);
         }
+
         var combined = _.map(keys, function(key) {
             return xAndYDataDict[key];
         });
@@ -166,7 +173,6 @@ var utils = {
     calculateRatiosForData: function(data, isSpecialDenominator, x_val_key) {
         var ratio_actual_cost_x = (isSpecialDenominator) ? x_val_key : 'x_actual_cost',
                 ratio_item_x = (isSpecialDenominator) ? x_val_key : 'x_items';
-        // console.log('_calculateRatiosForData', isSpecialDenominator, ratio_item_x);
         _.each(data, function(d, i) {
             d.name = ('row_name' in d) ? d.row_name + " (" + d.row_id + ")" : null;
             d.id = ('row_id' in d) ? d.row_id : null;

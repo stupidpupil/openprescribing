@@ -8,15 +8,22 @@ import api.views_org_details as views_org_details
 import api.views_org_location as views_org_location
 
 urlpatterns = [
-
-    url(r'^spending/$', views_spending.total_spending, name='total_spending'),
-    url(r'^spending_by_ccg/$', views_spending.spending_by_ccg, name='spending_by_ccg'),
-    url(r'^spending_by_practice/$', views_spending.spending_by_practice, name='spending_by_practice'),
+    url(r'^spending/$', views_spending.total_spending,
+        name='total_spending'),
+    url(r'^spending_by_ccg/$', views_spending.spending_by_ccg,
+        name='spending_by_ccg'),
+    url(r'^spending_by_practice/$', views_spending.spending_by_practice,
+        name='spending_by_practice'),
+    url(r'^measure/$', views_measures.measure_global,
+        name='measure'),
+    url(r'^measure_by_ccg/$', views_measures.measure_by_ccg,
+        name='measure_by_ccg'),
+    url(r'^measure_by_practice/$', views_measures.measure_by_practice,
+        name='measure_by_practice'),
     url(r'^org_details/$', views_org_details.org_details),
     url(r'^bnf_code/$', views_bnf_codes.bnf_codes),
     url(r'^org_code/$', views_org_codes.org_codes),
     url(r'^org_location/$', views_org_location.org_location),
-
     url(r'^docs/', include('rest_framework_swagger.urls')),
 ]
 
