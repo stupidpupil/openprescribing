@@ -30,7 +30,7 @@ class TestAPIOrgLocationViews(TestCase):
         content = json.loads(response.content)
         self.assertEqual(len(content['features']), 2)
         coord = content['features'][1]['geometry']['coordinates'][0][0][0]
-        self.assertEqual(coord[0], -117.0)
+        self.assertEqual(coord[0], -117.00000000000003)
         self.assertEqual(coord[1], 33.97943076318428)
 
     def test_api_view_org_location_ccg_by_code(self):
@@ -40,7 +40,7 @@ class TestAPIOrgLocationViews(TestCase):
         content = json.loads(response.content)
         self.assertEqual(len(content['features']), 2)
         coord = content['features'][0]['geometry']['coordinates'][0][0][0]
-        self.assertEqual(coord[0], -117.0)
+        self.assertEqual(coord[0], -117.00000000000003)
         self.assertEqual(coord[1], 33.97943076318428)
 
     @unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"],
@@ -51,6 +51,9 @@ class TestAPIOrgLocationViews(TestCase):
         self.assertEqual(response.status_code, 200)
         content = json.loads(response.content)
         self.assertEqual(len(content['features']), 1)
+        props = content['features'][0]['properties']
+        self.assertEqual(props['name'], 'AINSDALE VILLAGE SURGERY')
+        self.assertEqual(props['setting'], 4)
         coord = content['features'][0]['geometry']['coordinates']
         self.assertEqual(coord[0], 1.0)
         self.assertEqual(coord[1], 51.5)

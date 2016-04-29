@@ -38,11 +38,9 @@ And then install JavaScript dependencies:
 Create database and env variables
 ---------------------------------
 
-Set up a Postgres 9.4 database, and create a superuser for the database.
+Set up a Postgres 9.4 database, with PostGIS extensions, and create a superuser for the database.
 
 Set the `DB_NAME`, `DB_USER`, and `DB_PASS` environment variables based on the database login you used above.
-
-You also will need an OpenCageData API key if you want to geocode practices. Set this to `OPENCAGEDATA_KEY`.
 
 You will need a `GMAIL_PASS` environment variable to send error emails in production. In development you will only need this to run tests, so you can set this to anything.
 
@@ -78,8 +76,6 @@ Load the HSCIC data
 
 Run setup.sh to fetch and import data, and create the indexes and materialized views needed to set up the database.
 
-(TBA)
-
     chmod u+x setup.sh
     ./setup.sh
 
@@ -114,13 +110,14 @@ Updating the data
 
 You may need to add data for new months. To do this, active your virtualenv, then wget the files you need from the HSCIC site.
 
-Then import the practices:
+You may want to start by updating organisational data, with the latest versions of the `eccg.csv` and `epraccur.csv` files:
 
-    python manage.py import_hscic_practices --practice_file data/raw_data/[ADDR FILE].CSV -v 2
+    python manage.py import_org_names --ccg data/org_codes/eccg.csv
+    python manage.py import_hscic_practices --practice_file data/raw_data/[PRACTICE FILE].CSV -v 2 --epraccur data/org_codes/epraccur.csv
 
-(If new practices were added, you may want to re-run the practice geocoder:)
+If new practices were added, you may want to re-run the practice geocoder, with the latest version of the `gridall.csv` file:
 
-    python manage.py geocode_practices -v 2
+    python manage.py geocode_practices -v 2 --filename data/gridall.csv
 
 Import the chemicals:
 

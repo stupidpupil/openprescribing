@@ -10,7 +10,6 @@ var analyseMap = {
     },
 
     setup: function(options) {
-
         this.options = options;
         // TODO: Deal with no data
         //         $('#map-wrapper').show();
@@ -75,7 +74,13 @@ var analyseMap = {
             var joinedFeatures = [],
                 byName = {};
             _.each(currentJson.features, function(d, i) {
-                byName[d.properties.name] = d;
+                if ('setting' in d.properties) {
+                    if (d.properties.setting === 4) {
+                        byName[d.properties.name] = d;
+                    }
+                } else {
+                    byName[d.properties.name] = d;
+                }
             });
             for (var name in byName) {
                 byName[name].properties.data = data[name];
@@ -171,7 +176,7 @@ var analyseMap = {
 
     resize: function() {
         var _this = this;
-        if ((_this.orgLayer.getGeoJSON()) && (_this.orgLayer.getGeoJSON().length)) {
+        if ((_this.orgLayer.getGeoJSON()) && (_this.orgLayer.getGeoJSON().length) && (_this.orgLayer.getBounds().isValid())) {
             _this.map.invalidateSize();
             _this.map.fitBounds(_this.orgLayer.getBounds(), {
                 minZoom: 7,
@@ -181,7 +186,6 @@ var analyseMap = {
             _this.map.invalidateSize();
             _this.map.setView([52, 0], 6);
         }
-        //$('#map, #chart').hide().fadeIn();
     },
 
     getBoundsUrl: function(options) {

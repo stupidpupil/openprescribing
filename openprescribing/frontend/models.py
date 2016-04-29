@@ -1,5 +1,7 @@
 from django.contrib.gis.db import models
+from django.contrib.postgres.fields import JSONField
 from validators import isAlphaNumeric
+import model_prescribing_units
 
 
 class Section(models.Model):
@@ -62,6 +64,7 @@ class PCT(models.Model):
     PCT_ORG_TYPES = (
         ('CCG', 'CCG'),
         ('PCT', 'PCT'),
+        ('H', 'Hub'),
         ('Unknown', 'Unknown')
     )
     code = models.CharField(max_length=3, primary_key=True,
@@ -72,6 +75,10 @@ class PCT(models.Model):
                                 default='Unknown')
     boundary = models.GeometryField(null=True, blank=True)
     managing_group = models.ForeignKey(SHA, null=True, blank=True)
+    open_date = models.DateField(null=True, blank=True)
+    close_date = models.DateField(null=True, blank=True)
+    address = models.CharField(max_length=400, null=True, blank=True)
+    postcode = models.CharField(max_length=10, null=True, blank=True)
 
     objects = models.GeoManager()
 
@@ -106,6 +113,14 @@ class Practice(models.Model):
         (24, "Other - Justice Estate"),
         (25, "Prison")
     )
+    STATUS_SETTINGS = (
+        ('U', 'Unknown'),
+        ('A', 'Active'),
+        ('B', 'Retired'),
+        ('C', 'Closed'),
+        ('D', 'Dormant'),
+        ('P', 'Proposed')
+    )
     ccg = models.ForeignKey(PCT, null=True, blank=True)
     area_team = models.ForeignKey(SHA, null=True, blank=True)
     code = models.CharField(max_length=6, primary_key=True,
@@ -115,11 +130,19 @@ class Practice(models.Model):
     address2 = models.CharField(max_length=200, null=True, blank=True)
     address3 = models.CharField(max_length=200, null=True, blank=True)
     address4 = models.CharField(max_length=200, null=True, blank=True)
+    address5 = models.CharField(max_length=200, null=True, blank=True)
     postcode = models.CharField(max_length=9, null=True, blank=True)
     location = models.PointField(null=True, blank=True)
     setting = models.IntegerField(choices=PRESCRIBING_SETTINGS,
                                   default=-1)
     objects = models.GeoManager()
+    open_date = models.DateField(null=True, blank=True)
+    close_date = models.DateField(null=True, blank=True)
+    join_provider_date = models.DateField(null=True, blank=True)
+    leave_provider_date = models.DateField(null=True, blank=True)
+    status_code = models.CharField(max_length=1,
+                                   choices=STATUS_SETTINGS,
+                                   null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -132,6 +155,8 @@ class Practice(models.Model):
             address += self.address3 + ', '
         if self.address4:
             address += self.address4 + ', '
+        if self.address5:
+            address += self.address5 + ', '
         address += self.postcode
         return address
 
@@ -143,6 +168,8 @@ class Practice(models.Model):
             address += self.address3 + ', '
         if self.address4:
             address += self.address4 + ', '
+        if self.address5:
+            address += self.address5 + ', '
         address += self.postcode
         return address
 
@@ -163,9 +190,10 @@ class PracticeIsDispensing(models.Model):
         unique_together = ("practice", "date")
 
 
-class PracticeList(models.Model):
+class PracticeStatistics(models.Model):
     '''
-    List size categories from NHS BSA.
+    Statistics for a practice in a particular month, including
+    list sizes and derived values such as ASTRO-PUs and STAR-PUs.
     '''
     practice = models.ForeignKey(Practice)
     pct = models.ForeignKey(PCT, null=True, blank=True)
@@ -189,83 +217,15 @@ class PracticeList(models.Model):
     male_75_plus = models.IntegerField()
     female_75_plus = models.IntegerField()
     total_list_size = models.IntegerField()
+
     astro_pu_cost = models.FloatField()
     astro_pu_items = models.FloatField()
-    star_pu_oral_antibac_items = models.FloatField()
+
+    star_pu = JSONField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        list_total = self.male_0_4 + self.female_0_4 + \
-            self.male_5_14 + self.female_5_14 + \
-            self.male_15_24 + self.female_15_24 + \
-            self.male_25_34 + self.female_25_34 + \
-            self.male_35_44 + self.female_35_44 + \
-            self.male_45_54 + self.female_45_54 + \
-            self.male_55_64 + self.female_55_64 + \
-            self.male_65_74 + self.female_65_74 + \
-            self.male_75_plus + self.female_75_plus
-        self.total_list_size = list_total
-
-        astro_pu_cost = (1.0 * float(self.male_0_4)) + \
-            (0.9 * float(self.female_0_4)) + \
-            (0.9 * float(self.male_5_14)) + \
-            (0.7 * float(self.female_5_14)) + \
-            (1.2 * float(self.male_15_24)) + \
-            (1.4 * float(self.female_15_24)) + \
-            (1.3 * float(self.male_25_34)) + \
-            (1.8 * float(self.female_25_34)) + \
-            (1.8 * float(self.male_35_44)) + \
-            (2.6 * float(self.female_35_44)) + \
-            (3.1 * float(self.male_45_54)) + \
-            (3.7 * float(self.female_45_54)) + \
-            (5.3 * float(self.male_55_64)) + \
-            (5.4 * float(self.female_55_64)) + \
-            (8.7 * float(self.male_65_74)) + \
-            (7.6 * float(self.female_65_74)) + \
-            (11.3 * float(self.male_75_plus)) + \
-            (9.9 * float(self.female_75_plus))
-        self.astro_pu_cost = astro_pu_cost
-
-        astro_pu_items = (5.2 * float(self.male_0_4)) + \
-            (4.6 * float(self.female_0_4)) + \
-            (2.8 * float(self.male_5_14)) + \
-            (2.5 * float(self.female_5_14)) + \
-            (2.5 * float(self.male_15_24)) + \
-            (4.6 * float(self.female_15_24)) + \
-            (2.9 * float(self.male_25_34)) + \
-            (6.0 * float(self.female_25_34)) + \
-            (4.9 * float(self.male_35_44)) + \
-            (8.3 * float(self.female_35_44)) + \
-            (8.7 * float(self.male_45_54)) + \
-            (12.3 * float(self.female_45_54)) + \
-            (16.6 * float(self.male_55_64)) + \
-            (19.1 * float(self.female_55_64)) + \
-            (29.9 * float(self.male_65_74)) + \
-            (30.4 * float(self.female_65_74)) + \
-            (44.9 * float(self.male_75_plus)) + \
-            (48.5 * float(self.female_75_plus))
-        self.astro_pu_items = astro_pu_items
-
-        star_pu_oral_antibac_items = (0.8 * float(self.male_0_4)) + \
-            (0.8 * float(self.female_0_4)) + \
-            (0.3 * float(self.male_5_14)) + \
-            (0.4 * float(self.female_5_14)) + \
-            (0.3 * float(self.male_15_24)) + \
-            (0.6 * float(self.female_15_24)) + \
-            (0.2 * float(self.male_25_34)) + \
-            (0.6 * float(self.female_25_34)) + \
-            (0.3 * float(self.male_35_44)) + \
-            (0.6 * float(self.female_35_44)) + \
-            (0.3 * float(self.male_45_54)) + \
-            (0.6 * float(self.female_45_54)) + \
-            (0.4 * float(self.male_55_64)) + \
-            (0.7 * float(self.female_55_64)) + \
-            (0.7 * float(self.male_65_74)) + \
-            (1.0 * float(self.female_65_74)) + \
-            (1.0 * float(self.male_75_plus)) + \
-            (1.3 * float(self.female_75_plus))
-        self.star_pu_oral_antibac_items = star_pu_oral_antibac_items
-
-        super(PracticeList, self).save(*args, **kwargs)
+        self = model_prescribing_units.set_units(self)
+        super(PracticeStatistics, self).save(*args, **kwargs)
 
     class Meta:
         app_label = 'frontend'
@@ -330,11 +290,16 @@ class Product(models.Model):
 class Presentation(models.Model):
     '''
     GP prescribing products. Import from BNF codes file from BSA.
+    ADQs imported from BSA data.
     '''
     bnf_code = models.CharField(max_length=15, primary_key=True,
                                 validators=[isAlphaNumeric])
     name = models.CharField(max_length=200)
     is_generic = models.NullBooleanField(default=None)
+    active_quantity = models.FloatField(null=True, blank=True)
+    adq = models.FloatField(null=True, blank=True)
+    adq_unit = models.CharField(max_length=10, null=True, blank=True)
+    percent_of_adq = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return '%s: %s' % (self.bnf_code, self.name)
@@ -369,15 +334,121 @@ class Prescription(models.Model):
     pct = models.ForeignKey(PCT)
     practice = models.ForeignKey(Practice)
     chemical = models.ForeignKey(Chemical)
-    presentation_code = models.CharField(max_length=15, db_index=True,
+    presentation_code = models.CharField(max_length=15,
                                          validators=[isAlphaNumeric])
     presentation_name = models.CharField(max_length=1000)
     total_items = models.IntegerField()
     net_cost = models.FloatField()
     actual_cost = models.FloatField()
     quantity = models.FloatField()
-    processing_date = models.DateField(db_index=True)
+    processing_date = models.DateField()
     price_per_unit = models.FloatField()
 
     class Meta:
         app_label = 'frontend'
+
+
+class Measure(models.Model):
+    id = models.CharField(max_length=40, primary_key=True)
+    name = models.CharField(max_length=500)
+    title = models.CharField(max_length=500)
+    description = models.TextField()
+    why_it_matters = models.TextField(null=True, blank=True)
+    numerator_description = models.CharField(max_length=500, null=True,
+                                             blank=True)
+    denominator_description = models.CharField(max_length=500, null=True,
+                                               blank=True)
+    numerator_short = models.CharField(max_length=100, null=True, blank=True)
+
+    denominator_short = models.CharField(max_length=100, null=True, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    url = models.URLField(null=True, blank=True)
+    is_percentage = models.NullBooleanField()
+    is_cost_based = models.NullBooleanField()
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        app_label = 'frontend'
+
+
+class MeasureValue(models.Model):
+    '''
+    An instance of a measure for a particular organisation,
+    on a particular date.
+    If it's a measure for a CCG, the practice field will be null.
+    Otherwise, it's a measure for a practice, and the pct field
+    indicates the parent CCG, if it exists.
+    '''
+    measure = models.ForeignKey(Measure)
+    pct = models.ForeignKey(PCT, null=True, blank=True)
+    practice = models.ForeignKey(Practice, null=True, blank=True)
+    month = models.DateField()
+
+    numerator = models.FloatField(null=True, blank=True)
+    denominator = models.FloatField(null=True, blank=True)
+    calc_value = models.FloatField(null=True, blank=True)
+
+    # Optionally store the raw values, where appropriate.
+    # Cost and quantity are used for calculating cost savings.
+    num_items = models.IntegerField(null=True, blank=True)
+    denom_items = models.IntegerField(null=True, blank=True)
+    num_cost = models.FloatField(null=True, blank=True)
+    denom_cost = models.FloatField(null=True, blank=True)
+    num_quantity = models.FloatField(null=True, blank=True)
+    denom_quantity = models.FloatField(null=True, blank=True)
+
+    percentile = models.FloatField(null=True, blank=True)
+
+    # Cost savings if organisation had prescribed at set levels.
+    # Only used with cost-based measures.
+    cost_savings = JSONField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'frontend'
+        unique_together = (('measure', 'practice', 'month'),
+                           ('measure', 'pct', 'practice', 'month'),)
+
+
+class MeasureGlobal(models.Model):
+    '''
+    An instance of the global values for a measure,
+    on a particular date.
+    Percentile values may or may not be required. We
+    include them as placeholders for now.
+    '''
+    measure = models.ForeignKey(Measure)
+    month = models.DateField()
+
+    numerator = models.FloatField(null=True, blank=True)
+    denominator = models.FloatField(null=True, blank=True)
+    calc_value = models.FloatField(null=True, blank=True)
+
+    # Optionally store the raw values, where appropriate.
+    # Cost and quantity are used for calculating cost savings.
+    num_items = models.IntegerField(null=True, blank=True)
+    denom_items = models.IntegerField(null=True, blank=True)
+    num_cost = models.FloatField(null=True, blank=True)
+    denom_cost = models.FloatField(null=True, blank=True)
+    num_quantity = models.FloatField(null=True, blank=True)
+    denom_quantity = models.FloatField(null=True, blank=True)
+
+    # Percentile values for practices.
+    percentiles = JSONField(null=True, blank=True)
+    cost_savings = JSONField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.denominator:
+            if self.numerator:
+                self.value = self.numerator / self.denominator
+            else:
+                self.value = self.numerator
+        else:
+            self.value = None
+        super(MeasureGlobal, self).save(*args, **kwargs)
+
+    class Meta:
+        app_label = 'frontend'
+        unique_together = (('measure', 'month'),)

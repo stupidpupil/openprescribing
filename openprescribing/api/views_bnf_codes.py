@@ -8,6 +8,7 @@ from frontend.models import Chemical, Section, Product, Presentation
 @api_view(['GET'])
 def bnf_codes(request, format=None):
     codes = utils.param_to_list(request.query_params.get('q', []))
+    codes = [c.upper() for c in codes]
     is_exact = request.GET.get('exact', None)
     is_exact = (is_exact == 'true')
 
@@ -26,7 +27,13 @@ def _convert_querysets(querysets):
             if item['type'] == 0:
                 item['id'] = qu_item.number_str
                 item['name'] = qu_item.name
-                item['type'] = 'BNF section'
+                levels = item['id'].split('.')
+                if len(levels) > 2:
+                    item['type'] = 'BNF paragraph'
+                elif len(levels) == 2:
+                    item['type'] = 'BNF section'
+                else:
+                    item['type'] = 'BNF chapter'
             elif item['type'] == 1:
                 item['id'] = qu_item.bnf_code
                 item['name'] = qu_item.chem_name

@@ -6,6 +6,8 @@ require('bootstrap');
 require('Highcharts');
 require('mapbox.js');
 var _ = require('underscore');
+var Handlebars = require('handlebars');
+var measures = require('./dashboard-measures');
 
 var utils = require('./src/chart_utils');
 var formatters = require('./src/chart_formatters');
@@ -15,117 +17,84 @@ Highcharts.setOptions({
     global: { useUTC: false }
 });
 
-var barChart = {
+L.mapbox.accessToken = 'pk.eyJ1IjoiYW5uYXBvd2VsbHNtaXRoIiwiYSI6ImNzY1VpYkkifQ.LC_IcHpHfOvWOQCuo5t7Hw';
+
+var dashboard = {
     el: {
         noData: '',
         status: '.status',
-        trendsPanel: '#trends'
+        trendsPanel: '#trends',
+        mapPanel: 'map-ccg'
     },
     errorMessage: '<p>Sorry, something went wrong.</p>',
 
     setUp: function() {
 
         this.setUpShowPractices();
-        this.setUpMap();
 
         var _this = this;
-        this.orgId = orgId;
-        this.orgName = orgName;
-        this.orgType = orgType;
-        this.baseUrl = '/api/1.0/';
-        this.spendUrl = this.baseUrl;
-        this.spendUrl += (this.orgType === 'CCG') ? 'spending_by_ccg' : 'spending_by_practice';
-        var graphList = [
-            {
-                chartId: 'rosuvastatin',
-                numIds: [{ id: '0212000AA', 'name': 'Rosuvastatin'}],
-                denomIds: [{ id: '0212000B0', 'name': 'Atorvastatin'}]
-            },
-            {
-                chartId: 'antibiotics',
-                numIds: [{ id: '0501', 'name': 'Antibacterial Drugs'}],
-                denom: 'star_pu_oral_antibac_items',
-                denomIds: []
-            },
-            {
-                chartId: 'cephalosporins',
-                numIds: [{ id: '050102', 'name': 'Cephalosporins and other Beta-Lactams'}],
-                denom: 'star_pu_oral_antibac_items',
-                denomIds: []
-            },
-            {
-                chartId: 'cerazette',
-                numIds: [{ id: '0703021Q0BB', 'name': 'Cerazette'}],
-                denomIds: [{ id: '0703021Q0', 'name': 'Desogestrel'}]
-            },
-            {
-                chartId: 'pioglitazone',
-                numIds: [{ id: '0601023B0', 'name': 'Pioglitazone Hydrochloride'}],
-                denomIds: [{ id: '060102', 'name': 'All diabetes'}]
-            },
-            {
-                chartId: 'celecoxib',
-                numIds: [{ id: '0801050AY', 'name': 'Celecoxib'}, {id: '1001010AH', 'name': 'Celecoxib'}],
-                denomIds: [{ id: '100101', 'name': 'Non-Steroidal Anti-Inflammatory Drugs'}]
-            }
-        ];
-        _.each(graphList, function(d) {
-            var chartOptions = {
-                'activeOption': 'items',
-                'org': _this.orgType,
-                'orgIds': [{ 'id': _this.orgId, 'name': _this.orgName}],
-                'num': 'chemical',
+        _this.orgId = orgId;
+        _this.orgName = orgName;
+        _this.orgType = orgType;
+        _this.baseUrl = '/api/1.0/';
+        _this.spendUrl = _this.baseUrl;
+        _this.spendUrl += (_this.orgType === 'CCG') ? 'spending_by_ccg' : 'spending_by_practice';
+
+        this.setUpMap(_this.orgId, _this.orgType);
+
+        var metric_panel_source = $("#metric-panel").html();
+        var metric_panel_template = Handlebars.compile(metric_panel_source);
+        var metric_explanation_source = $("#metric-explanation").html();
+        var metric_explanation_template = Handlebars.compile(metric_explanation_source);
+
+        _.each(measures, function(m) {
+            var data = {
+                "metric_id": m.chartId,
+                "metric_intro": m.chartIntro,
+                "metric_name": m.chartName,
+                "metric_description": m.chartDescription,
+                "org_name": _this.orgName,
+                "org_type": _this.orgType
             };
-            chartOptions.chartId = d.chartId;
-            chartOptions.numIds = d.numIds;
-            chartOptions.denom = d.denom || 'chemical';
-            chartOptions.denomIds = d.denomIds;
-            if (chartOptions.denom !== 'chemical') {
-                chartOptions.chartValues = {
-                    x_val: chartOptions.denom,
-                    x: chartOptions.denom
-                };
-            } else {
-                chartOptions.chartValues = {
-                    x_val: 'x_items',
-                    x: 'items'
-                };
+            function getUrl(d) {
+                var url = '&numIds=';
+                _.each(d.numIds, function(numId, i) {
+                    url += numId.id;
+                    url += (i < (d.numIds.length-1)) ? ',' : '';
+                });
+                if (d.denomIds.length) {
+                    url += '&denomIds=';
+                    _.each(d.denomIds, function(denomId, i) {
+                        url += denomId.id;
+                        url += (i < (d.denomIds.length-1)) ? ',' : '';
+                    });
+                } else {
+                    url += '&denom=' + d.denom;
+                }
+                return url;
             }
-            chartOptions.chartValues.y = 'y_items';
-            chartOptions.chartValues.ratio = 'ratio_items';
-
-            var numStr = utils.idsToString(chartOptions.numIds);
-            chartOptions.numOrgUrl = _this.spendUrl + '/?format=json&code=' + numStr;
-            chartOptions.numOrgUrl += '&org=' + _this.orgId;
-            chartOptions.numAllNHS = _this.baseUrl + 'spending/?format=json&code=' + numStr;
-
-            var denomStr = utils.idsToString(chartOptions.denomIds);
-            if (chartOptions.denom === 'chemical') {
-                chartOptions.denomOrgUrl = _this.spendUrl + '/?format=json&code=' + denomStr;
-                chartOptions.denomAllNHS = _this.baseUrl + 'spending/?format=json&code=' + denomStr;
+            if (_this.orgType == 'CCG') {
+                data.metric_footer = '<a href="/analyse#';
+                data.metric_footer += 'org=CCG&orgIds=' + this.orgId;
+                data.metric_footer += getUrl(m);
+                data.metric_footer += '">how this CCG compares to all CCGs</a>, or ';
+                data.metric_footer += '<a href="/analyse#org=practice&orgIds=' + this.orgId;
+                data.metric_footer += getUrl(m);
+                data.metric_footer += '">trends for all ';
+                data.metric_footer += 'practices in the same CCG</a>';
             } else {
-                chartOptions.denomOrgUrl = _this.baseUrl + 'org_details/?format=json';
-                chartOptions.denomOrgUrl += '&org_type=' + _this.orgType.toLowerCase();
-                chartOptions.denomAllNHS = _this.baseUrl + 'org_details/?format=json';
+                data.metric_footer = '<a href="/analyse#';
+                data.metric_footer += 'org=practice&orgIds=' + this.orgId;
+                data.metric_footer +=  getUrl(m);
+                data.metric_footer += '">how this practice compares to all ';
+                data.metric_footer += 'practices in the same CCG</a>';
             }
-            chartOptions.denomOrgUrl += '&org=' + _this.orgId;
-            chartOptions.friendly = formatters.getFriendlyNamesForChart(chartOptions);
-            _this.setUpChart(chartOptions);
+            var r = metric_panel_template(data);
+            $('#metric-panels').append(r);
+            r = metric_explanation_template(data);
+            $('#metric-explanations').append(r);
+            _this.setUpChart(_this.getChartOptions(m));
         });
-    },
-
-    setUpMap: function() {
-      if ($('#map-ccg').length) {
-          var map = L.map('map-ccg').setView([52.905, -1.79], 6);
-          map.scrollWheelZoom.disable();
-          L.tileLayer('https://{s}.tiles.mapbox.com/v3/annapowellsmith.ljij4na8/{z}/{x}/{y}.png', {
-              attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
-              maxZoom: 18
-          }).addTo(map);
-          var styleOptions = {"style": {"fillColor": "#ff00ff", "weight": "2", "color": "#333"}};
-          var layer = L.geoJson(boundary, styleOptions).addTo(map);
-          map.fitBounds(layer.getBounds());
-      }
     },
 
     setUpShowPractices: function() {
@@ -136,6 +105,29 @@ var barChart = {
             });
             $(this).hide();
         });
+    },
+
+    setUpMap: function(orgId, orgType) {
+        var _this = this;
+        var map = L.mapbox.map(_this.el.mapPanel, 'mapbox.streets').setView([52.905, -1.79], 6);
+        map.scrollWheelZoom.disable();
+        var url = '/api/1.0/org_location/?org_type=' + orgType.toLowerCase();
+        url += '&q=' + orgId;
+        var layer = L.mapbox.featureLayer()
+            .loadURL(url)
+            .on('ready', function() {
+                if (layer.getBounds().isValid()) {
+                    map.fitBounds(layer.getBounds(), {maxZoom: 12});
+                    layer.setStyle({fillColor: '#ff00ff',
+                                    fillOpacity: 0.2,
+                                    weight: 0.5,
+                                    color: "#333",
+                                    radius: 10});
+                } else {
+                    $('#map-container').html('');
+                }
+            })
+            .addTo(map);
     },
 
     setUpChart: function(chartOptions) {
@@ -160,11 +152,54 @@ var barChart = {
             .fail(function(){
                 $('#' + this.chartId).find(_this.el.status).html(_this.errorMessage).show();
             });
+    },
 
+    getChartOptions: function(d) {
+        var _this = this;
+        var chartOptions = {
+            'activeOption': 'items',
+            'org': _this.orgType,
+            'orgIds': [{ 'id': _this.orgId, 'name': _this.orgName}],
+            'num': 'chemical',
+        };
+        chartOptions.chartId = d.chartId;
+        chartOptions.numIds = d.numIds;
+        chartOptions.denom = d.denom || 'chemical';
+        chartOptions.denomIds = d.denomIds;
+        if (chartOptions.denom !== 'chemical') {
+            chartOptions.chartValues = {
+                x_val: chartOptions.denom,
+                x: chartOptions.denom
+            };
+        } else {
+            chartOptions.chartValues = {
+                x_val: 'x_items',
+                x: 'items'
+            };
+        }
+        chartOptions.chartValues.y = 'y_items';
+        chartOptions.chartValues.ratio = 'ratio_items';
+
+        var numStr = utils.idsToString(chartOptions.numIds);
+        chartOptions.numOrgUrl = _this.spendUrl + '/?format=json&code=' + numStr;
+        chartOptions.numOrgUrl += '&org=' + _this.orgId;
+        chartOptions.numAllNHS = _this.baseUrl + 'spending/?format=json&code=' + numStr;
+
+        var denomStr = utils.idsToString(chartOptions.denomIds);
+        if (chartOptions.denom === 'chemical') {
+            chartOptions.denomOrgUrl = _this.spendUrl + '/?format=json&code=' + denomStr;
+            chartOptions.denomAllNHS = _this.baseUrl + 'spending/?format=json&code=' + denomStr;
+        } else {
+            chartOptions.denomOrgUrl = _this.baseUrl + 'org_details/?format=json';
+            chartOptions.denomOrgUrl += '&org_type=' + _this.orgType.toLowerCase();
+            chartOptions.denomAllNHS = _this.baseUrl + 'org_details/?format=json';
+        }
+        chartOptions.denomOrgUrl += '&org=' + _this.orgId;
+        chartOptions.friendly = formatters.getFriendlyNamesForChart(chartOptions);
+        return chartOptions;
     },
 
     renderGraph: function(chartOptions, combined1, combined2) {
-        //console.log('renderGraph', chartOptions, combined1, combined2);
         var _this = this;
         if (combined1.length) {
             var hcOptions = _this.getHighchartsOptions(chartOptions);
@@ -223,7 +258,7 @@ var barChart = {
     }
 };
 
-barChart.setUp();
+dashboard.setUp();
 
 
 })();
